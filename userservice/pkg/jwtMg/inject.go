@@ -1,0 +1,5 @@
+package jwtMg
+
+import "github.com/google/wire"
+
+var Set = wire.NewSet(NewJWTManager)

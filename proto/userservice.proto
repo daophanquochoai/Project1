@@ -1,0 +1,19 @@
+syntax="proto3";
+
+package user;
+
+option go_package = "/userservicepb";
+
+service UserService {
+  rpc Authenticate(AuthRequest) returns (AuthResponse);
+}
+
+message AuthRequest {
+  string token = 1;
+}
+
+message AuthResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string role = 3;
+}

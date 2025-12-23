@@ -1,0 +1,27 @@
+server:
+  http_port: "8005"
+  grpc_port: "9005"
+  env: "development"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "postgres"
+  name: "user_service"
+  sslmode: "disable"
+  timezone: "UTC"
+
+jwt:
+  secret: "777fa2ffee842336d801994a2b129cd0f217c95458cf1b4a0afbe1853219bbc8"
+  access_expiry: "1h"
+  refresh_expiry: "168h"
+
+redis:
+  addr: "localhost:6379"
+  pass: "redis_password"
+  db: 0
+
+
+logging:
+  level: "info"
