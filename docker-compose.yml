@@ -1,0 +1,159 @@
+services:
+
+  postgres_pr1:
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    container_name: postgres_pr1
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERPASS:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/00_bootstrap.sql:/docker-entrypoint-initdb.d/00_bootstrap.sql:ro
+      - ./db/userdb/01_init_user_db.sql:/docker-entrypoint-initdb.d/01_init_user_db.sql:ro
+      - ./db/productdb/01_init_product_db.sql:/docker-entrypoint-initdb.d/02_init_product_db.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d postgres",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - traefik-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis_pr1:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    container_name: redis_pr1
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password} --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - traefik-network
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    ports:
+      - "80:80"
+      - "8080:8080" # dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - traefik-network
+    restart: unless-stopped
+
+  user-service:
+    image: doctorhoai/training_product1_userservice:v3
+    container_name: user-service
+    depends_on:
+      postgres_pr1:
+        condition: service_healthy
+      redis_pr1:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user.rule=PathPrefix(`/api/userservice`)"
+      - "traefik.http.routers.user.entrypoints=web"
+      - "traefik.http.services.user.loadbalancer.server.port=8005"
+      - "traefik.http.routers.user.middlewares=strip-userservice@file,cors-default@file,rate-limit-basic@file"
+    environment:
+      # Server Config
+      - HTTP_PORT=8005
+      - GRPC_PORT=9005
+      - ENV=production
+
+      # Database Config
+      - DB_HOST=postgres_pr1
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=user_service
+      - DB_SSLMODE=disable
+      - DB_TIMEZONE=Asia/Ho_Chi_Minh
+
+      # JWT Config
+      - JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long-change-in-production
+      - JWT_ACCESS_EXPIRY=15m
+      - JWT_REFRESH_EXPIRY=168h
+
+      # Redis Config
+      - REDIS_ADDR=redis_pr1:6379
+      - REDIS_PASSWORD=redis_password
+      - REDIS_DB=0
+    networks:
+      - traefik-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "wget --quiet --tries=1 --spider http://localhost:8005/health && nc -z localhost 9005" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  product-service:
+    image: doctorhoai/training_product1_productservice:v3
+    container_name: product-service
+    depends_on:
+      postgres_pr1:
+        condition: service_healthy
+      redis_pr1:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.product.rule=PathPrefix(`/api/productservice`)"
+      - "traefik.http.routers.product.entrypoints=web"
+      - "traefik.http.services.product.loadbalancer.server.port=8010"
+      - "traefik.http.routers.product.middlewares=strip-productservice@file,cors-default@file,rate-limit-basic@file"
+    environment:
+      # Server Config
+      - HTTP_PORT=8010
+      - ENV=production
+
+      # Database Config
+      - DB_HOST=postgres_pr1
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=product_service
+      - DB_SSLMODE=disable
+      - DB_TIMEZONE=Asia/Ho_Chi_Minh
+
+      # Redis Config
+      - REDIS_ADDR=redis_pr1:6379
+      - REDIS_PASSWORD=redis_password
+      - REDIS_DB=0
+    networks:
+      - traefik-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8010/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  traefik-network:
+    driver: bridge

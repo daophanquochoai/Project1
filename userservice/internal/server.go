@@ -1,5 +1,6 @@
 package internal
 
+//
 //import (
 //	"encoding/json"
 //	"github.com/agris/user-service/internal/cache"
@@ -33,6 +34,7 @@ package internal
 //		NewServer,
 //	))
 //}
+//
 //
 //func NewServer(router *router.RouterHandler) *fiber.App {
 //	app := fiber.New(fiber.Config{

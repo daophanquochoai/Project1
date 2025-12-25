@@ -10,26 +10,29 @@ import (
 	"github.com/agris/user-service/internal/cache"
 	"github.com/agris/user-service/internal/config"
 	"github.com/agris/user-service/internal/database"
+	"github.com/agris/user-service/internal/grpc/interceptor"
 	"github.com/agris/user-service/internal/grpc/service_grpc"
 	"github.com/agris/user-service/internal/repository"
 	"github.com/agris/user-service/internal/service"
 	"github.com/agris/user-service/pkg/jwtMg"
+	"google.golang.org/grpc"
 )
 
 // Injectors from wire_grpc.go:
 
-func InitGRPCServer() (*service_grpc.AuthGRPCService, error) {
+// InitGRPCServer khởi tạo TẤT CẢ dependencies và tạo gRPC server
+func InitGRPCServer() (*grpc.Server, func(), error) {
 	configConfig, err := config.Load()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	db, err := database.NewPostgresDB(configConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	client, err := cache.NewRedisClient(configConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	userRepository := repository.NewUserRepository(db, client)
 	jwtManager := jwtMg.NewJWTManager(configConfig)
@@ -37,5 +40,12 @@ func InitGRPCServer() (*service_grpc.AuthGRPCService, error) {
 	authService := service.NewAuthService(userRepository, jwtManager, configConfig, redisRepository)
 	userService := service.NewUserService(userRepository)
 	authGRPCService := service_grpc.NewAuthGRPCService(authService, jwtManager, userService)
-	return authGRPCService, nil
+	authInterceptor := interceptor.NewAuthInterceptor(jwtManager)
+	server, cleanup, err := NewGRPCServer(configConfig, authGRPCService, authInterceptor)
+	if err != nil {
+		return nil, nil, err
+	}
+	return server, func() {
+		cleanup()
+	}, nil
 }

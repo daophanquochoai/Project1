@@ -1,0 +1,10 @@
+.idea/
+.git/
+.gitignore
+*.md
+*.log
+bin/
+*.test
+.vscode/
+wire_gen.go
+
