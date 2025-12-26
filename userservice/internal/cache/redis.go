@@ -2,9 +2,11 @@ package cache
 
 import (
 	"context"
-	"github.com/agris/user-service/internal/config"
-	"github.com/redis/go-redis/v9"
+	"log"
 	"time"
+
+	"github.com/agris/user-service/config"
+	"github.com/redis/go-redis/v9"
 )
 
 func NewRedisClient(config *config.Config) (*redis.Client, error) {
@@ -19,6 +21,7 @@ func NewRedisClient(config *config.Config) (*redis.Client, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
+		log.Fatalf("failed to connect to redis: %v", err)
 		return nil, err
 	}
 	return client, nil

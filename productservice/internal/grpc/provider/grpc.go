@@ -1,10 +1,11 @@
 package provider
 
 import (
+	"log"
+	"productservice/config"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"log"
-	"productservice/internal/config"
 )
 
 func ProvideGRPCConnection(cfg *config.Config) (*grpc.ClientConn, func(), error) {

@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
+
+	"github.com/agris/user-service/config"
 	"github.com/agris/user-service/internal/cache"
-	"github.com/agris/user-service/internal/config"
 	"github.com/agris/user-service/internal/dto"
 	"github.com/agris/user-service/internal/repository"
 	"github.com/agris/user-service/internal/utils"
 	"github.com/agris/user-service/pkg/jwtMg"
 	"github.com/gofiber/fiber/v2/log"
-	"time"
 )
 
 type AuthService interface {

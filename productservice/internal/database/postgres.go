@@ -2,23 +2,24 @@ package database
 
 import (
 	"fmt"
+	"productservice/config"
+	"time"
+
+	"github.com/gofiber/fiber/v2/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"productservice/internal/config"
-	"time"
 )
 
 func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.Database.Host,
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.Name,
 		cfg.Database.Port,
 		cfg.Database.SSLMode,
-		cfg.Database.TimeZone,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -30,13 +31,14 @@ func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 
 	sqlDB, err := db.DB()
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	// Connection pool settings
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(15 * time.Minute)
 
 	return db, nil
 }

@@ -7,16 +7,17 @@ server:
   env: "development"
 
 database:
-  host: "localhost"
+  host: "host.docker.internal"
   port: "5432"
   user: "postgres"
   password: "postgres"
   name: "product_service"
   sslmode: "disable"
-  timezone: "UTC"
+  max_idle_conns : 10
+  max_open_conns : 100
 
 redis:
-  addr: "localhost:6379"
+  addr: "host.docker.internal:6379"
   pass: "redis_password"
   db: 0
 

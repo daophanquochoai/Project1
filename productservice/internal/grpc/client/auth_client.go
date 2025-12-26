@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
+	"productservice/internal/grpc/pb/userservicepb"
+
+	"github.com/gofiber/fiber/v2/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"productservice/internal/grpc/pb/userservicepb"
 )
 
 type AuthClient struct {
@@ -24,8 +26,8 @@ func (a *AuthClient) Authenticate(ctx context.Context, token string) (*userservi
 	}
 
 	resp, err := a.client.Authenticate(ctx, request)
-
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	return resp, nil
@@ -43,6 +45,7 @@ func (a *AuthClient) GetCurrentUserInfo(ctx context.Context, token string) (*use
 	// Gọi gRPC service với context đã có metadata
 	response, err := a.client.GetCurrentUserInfo(ctx, &emptypb.Empty{})
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 

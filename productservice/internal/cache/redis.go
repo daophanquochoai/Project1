@@ -2,9 +2,11 @@ package cache
 
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
-	"productservice/internal/config"
+	"productservice/config"
 	"time"
+
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/redis/go-redis/v9"
 )
 
 func NewRedisClient(config *config.Config) (*redis.Client, error) {
@@ -19,6 +21,7 @@ func NewRedisClient(config *config.Config) (*redis.Client, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	return client, nil

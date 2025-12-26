@@ -1,13 +1,14 @@
 package grpc
 
 import (
-	"github.com/agris/user-service/internal/config"
+	"log"
+	"net"
+
+	"github.com/agris/user-service/config"
 	"github.com/agris/user-service/internal/grpc/interceptor"
 	"github.com/agris/user-service/internal/grpc/pb/userservicepb"
 	"github.com/agris/user-service/internal/grpc/service_grpc"
 	"google.golang.org/grpc"
-	"log"
-	"net"
 )
 
 func NewGRPCServer(

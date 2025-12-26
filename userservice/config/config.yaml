@@ -11,7 +11,8 @@ database:
   name: "user_service"
   sslmode: "disable"
   timezone: "UTC"
-
+  max_idle_conns : 10
+  max_open_conns : 100
 jwt:
   secret: "777fa2ffee842336d801994a2b129cd0f217c95458cf1b4a0afbe1853219bbc8"
   access_expiry: "1h"
