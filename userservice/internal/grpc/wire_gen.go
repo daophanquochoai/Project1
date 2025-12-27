@@ -7,8 +7,8 @@
 package grpc
 
 import (
+	"github.com/agris/user-service/config"
 	"github.com/agris/user-service/internal/cache"
-	"github.com/agris/user-service/internal/config"
 	"github.com/agris/user-service/internal/database"
 	"github.com/agris/user-service/internal/grpc/interceptor"
 	"github.com/agris/user-service/internal/grpc/service_grpc"

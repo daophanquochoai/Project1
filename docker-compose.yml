@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
 
   user-service:
-    image: doctorhoai/training_product1_userservice:v3
+    image: doctorhoai/training_product1_userservice:lastest
     container_name: user-service
     depends_on:
       postgres_pr1:
@@ -73,28 +73,34 @@ services:
       - "traefik.http.services.user.loadbalancer.server.port=8005"
       - "traefik.http.routers.user.middlewares=strip-userservice@file,cors-default@file,rate-limit-basic@file"
     environment:
-      # Server Config
-      - HTTP_PORT=8005
-      - GRPC_PORT=9005
-      - ENV=production
+      # Config path
+      - cfgPath=/config/config
 
-      # Database Config
-      - DB_HOST=postgres_pr1
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=user_service
-      - DB_SSLMODE=disable
-      - DB_TIMEZONE=Asia/Ho_Chi_Minh
+      # Server Config (Viper format: SERVER_FIELD)
+      - SERVER_HTTP_PORT=8005
+      - SERVER_GRPC_AUTH_PORT=9005
+      - SERVER_GRPC_AUTH_HOST=0.0.0.0
+      - SERVER_ENV=production
 
-      # JWT Config
+      # Database Config (Viper format: DATABASE_FIELD)
+      - DATABASE_HOST=postgres_pr1
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=user_service
+      - DATABASE_SSLMODE=disable
+      - DATABASE_TIMEZONE=Asia/Ho_Chi_Minh
+      - DATABASE_MAX_IDLE_CONNS=10
+      - DATABASE_MAX_OPEN_CONNS=100
+
+      # JWT Config (nếu có trong config)
       - JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long-change-in-production
       - JWT_ACCESS_EXPIRY=15m
       - JWT_REFRESH_EXPIRY=168h
 
-      # Redis Config
+      # Redis Config (Viper format: REDIS_FIELD)
       - REDIS_ADDR=redis_pr1:6379
-      - REDIS_PASSWORD=redis_password
+      - REDIS_PASS=redis_password
       - REDIS_DB=0
     networks:
       - traefik-network
@@ -107,12 +113,14 @@ services:
       start_period: 40s
 
   product-service:
-    image: doctorhoai/training_product1_productservice:v3
+    image: doctorhoai/training_product1_productservice:lastest
     container_name: product-service
     depends_on:
       postgres_pr1:
         condition: service_healthy
       redis_pr1:
+        condition: service_healthy
+      user-service:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
@@ -121,22 +129,29 @@ services:
       - "traefik.http.services.product.loadbalancer.server.port=8010"
       - "traefik.http.routers.product.middlewares=strip-productservice@file,cors-default@file,rate-limit-basic@file"
     environment:
-      # Server Config
-      - HTTP_PORT=8010
-      - ENV=production
+      # Config path
+      - cfgPath=/config/config
 
-      # Database Config
-      - DB_HOST=postgres_pr1
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=product_service
-      - DB_SSLMODE=disable
-      - DB_TIMEZONE=Asia/Ho_Chi_Minh
+      # Server Config (Viper format: SERVER_FIELD)
+      - SERVER_HTTP_PORT=8010
+      - SERVER_GRPC_AUTH_PORT=9005
+      - SERVER_GRPC_AUTH_HOST=user-service
+      - SERVER_ENV=production
 
-      # Redis Config
+      # Database Config (Viper format: DATABASE_FIELD)
+      - DATABASE_HOST=postgres_pr1
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=product_service
+      - DATABASE_SSLMODE=disable
+      - DATABASE_TIMEZONE=Asia/Ho_Chi_Minh
+      - DATABASE_MAX_IDLE_CONNS=10
+      - DATABASE_MAX_OPEN_CONNS=100
+
+      # Redis Config (Viper format: REDIS_FIELD)
       - REDIS_ADDR=redis_pr1:6379
-      - REDIS_PASSWORD=redis_password
+      - REDIS_PASS=redis_password
       - REDIS_DB=0
     networks:
       - traefik-network

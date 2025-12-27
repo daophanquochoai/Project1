@@ -8,8 +8,8 @@ package internal
 
 import (
 	"encoding/json"
+	"github.com/agris/user-service/config"
 	"github.com/agris/user-service/internal/cache"
-	"github.com/agris/user-service/internal/config"
 	"github.com/agris/user-service/internal/database"
 	"github.com/agris/user-service/internal/handler"
 	"github.com/agris/user-service/internal/middleware"

@@ -2,8 +2,9 @@ package jwtMg
 
 import (
 	"errors"
-	"github.com/agris/user-service/internal/config"
 	"time"
+
+	"github.com/agris/user-service/config"
 
 	"github.com/agris/user-service/internal/model"
 	"github.com/golang-jwt/jwt/v5"

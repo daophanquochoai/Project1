@@ -14,13 +14,12 @@ RUN go mod download
 COPY . .
 
 # Build HTTP server
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/bin/http-server ./cmd/http
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/bin/http-server ./cmd
 
 # Final stage
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates tzdata wget netcat-openbsd
-RUN cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime && echo "Asia/Ho_Chi_Minh" > /etc/timezone
 
 WORKDIR /app
 
