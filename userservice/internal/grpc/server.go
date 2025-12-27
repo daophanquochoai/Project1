@@ -10,23 +10,45 @@ import (
 	"net"
 )
 
-func StartGRPCServer(config *config.Config, userGRPCService *service_grpc.AuthGRPCService) {
+func NewGRPCServer(
+	config *config.Config,
+	authGRPCService *service_grpc.AuthGRPCService,
+	authInterceptor *interceptor.AuthInterceptor,
+) (*grpc.Server, func(), error) {
+
+	// Tạo listener
 	lis, err := net.Listen("tcp", ":"+config.Server.GRPCPort)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		return nil, nil, err
 	}
 
+	// Tạo gRPC server với interceptors
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptor.LoggingInterceptor,
+			authInterceptor.Handler(),
 		),
 	)
 
-	userservicepb.RegisterUserServiceServer(server, userGRPCService)
+	// Đăng ký service
+	userservicepb.RegisterUserServiceServer(server, authGRPCService)
 
-	log.Printf("server listening at %v", lis.Addr())
-	if err := server.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	log.Printf("gRPC server configured to listen at %v", lis.Addr())
+
+	// Cleanup function
+	cleanup := func() {
+		log.Println("Shutting down gRPC server...")
+		server.GracefulStop()
+		lis.Close()
 	}
 
+	// Start server trong goroutine
+	go func() {
+		log.Printf("gRPC server listening at %v", lis.Addr())
+		if err := server.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
+
+	return server, cleanup, nil
 }

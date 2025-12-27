@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"time"
+
 	"github.com/agris/user-service/internal/dto"
 	"github.com/agris/user-service/internal/model"
 	"github.com/gofiber/fiber/v2/log"
@@ -10,8 +13,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"net/http"
-	"time"
 )
 
 type UserRepository interface {
@@ -33,7 +34,7 @@ func NewUserRepository(db *gorm.DB, rd *redis.Client) UserRepository {
 }
 
 func (r *userRepository) Create(ctx context.Context, user *models.User) (*models.User, error) {
-	result := r.db.WithContext(ctx).Clauses(clause.Returning{}).Create(user)
+	result := r.db.WithContext(ctx).Create(user)
 	if result.Error != nil {
 		return nil, result.Error
 	}

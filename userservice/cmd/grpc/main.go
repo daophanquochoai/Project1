@@ -1,21 +1,27 @@
 package main
 
 import (
-	"github.com/agris/user-service/internal/config"
 	"github.com/agris/user-service/internal/grpc"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	userGRPCService, err := grpc.InitGRPCServer()
+	// Wire inject - tạo gRPC server và tất cả dependencies
+	_, cleanup, err := grpc.InitGRPCServer()
 	if err != nil {
-		log.Fatalf("Failed to initialize gRPC: %v", err)
+		log.Fatalf("Failed to initialize gRPC server: %v", err)
 	}
+	defer cleanup()
 
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-	log.Println("Starting gRPC server")
-	grpc.StartGRPCServer(cfg, userGRPCService)
+	log.Println("gRPC server started successfully")
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	<-quit
+	log.Println("Received shutdown signal, cleaning up...")
 }

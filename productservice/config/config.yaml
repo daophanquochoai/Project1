@@ -1,0 +1,25 @@
+server:
+  http_port: "8010"
+  grpc:
+    auth:
+      port: "9005"
+      host: "localhost"
+  env: "development"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "postgres"
+  name: "product_service"
+  sslmode: "disable"
+  timezone: "UTC"
+
+redis:
+  addr: "localhost:6379"
+  pass: "redis_password"
+  db: 0
+
+
+logging:
+  level: "info"
