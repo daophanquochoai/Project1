@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"net/http"
+
 	"github.com/agris/user-service/internal/dto"
 	models "github.com/agris/user-service/internal/model"
 	"github.com/agris/user-service/internal/repository"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
 )
 
 type UserService interface {
@@ -43,6 +44,13 @@ func (u *userService) UpdateUserRole(ctx context.Context, updateAccount *dto.Upd
 			Err:    errors.New(ErrUserNotFound),
 		}
 		return nil, &response
+	}
+
+	if user == nil {
+		return nil, &dto.ServiceResponse{
+			Status: http.StatusNotFound,
+			Err:    errors.New(ErrUserNotFound),
+		}
 	}
 
 	// update
@@ -122,6 +130,13 @@ func (u *userService) GetCurrentUser(ctx context.Context, userID uuid.UUID) (*dt
 	user, err := u.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
+	}
+
+	if user == nil {
+		return nil, &dto.ServiceResponse{
+			Status: http.StatusNotFound,
+			Err:    errors.New(ErrUserNotFound),
+		}
 	}
 
 	response := dto.GetUserResponse{

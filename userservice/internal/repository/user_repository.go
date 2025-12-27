@@ -16,10 +16,10 @@ import (
 )
 
 type UserRepository interface {
-	Create(ctx context.Context, user *models.User) (*models.User, error)
-	FindByID(ctx context.Context, id uuid.UUID) (*models.User, *dto.ServiceResponse)
-	FindByEmail(ctx context.Context, email string, delete bool) (*models.User, *dto.ServiceResponse)
-	Update(ctx context.Context, user *models.User) (*models.User, *dto.ServiceResponse)
+	Create(ctx context.Context, user *model.User) (*model.User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*model.User, *dto.ServiceResponse)
+	FindByEmail(ctx context.Context, email string, delete bool) (*model.User, *dto.ServiceResponse)
+	Update(ctx context.Context, user *model.User) (*model.User, *dto.ServiceResponse)
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, pageRequest *dto.PageRequest) (*dto.PageResponse, error)
 }
@@ -33,7 +33,7 @@ func NewUserRepository(db *gorm.DB, rd *redis.Client) UserRepository {
 	return &userRepository{db: db, rd: rd}
 }
 
-func (r *userRepository) Create(ctx context.Context, user *models.User) (*models.User, error) {
+func (r *userRepository) Create(ctx context.Context, user *model.User) (*model.User, error) {
 	result := r.db.WithContext(ctx).Create(user)
 	if result.Error != nil {
 		return nil, result.Error
@@ -41,22 +41,24 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) (*models
 	return user, nil
 }
 
-func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.User, *dto.ServiceResponse) {
+func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, *dto.ServiceResponse) {
 	// redis
 	key := baseUser + id.String()
 	cached, err := r.rd.Get(ctx, key).Bytes()
 	if err == nil {
-		var user models.User
-		if er := json.Unmarshal(cached, &user); er != nil {
+		var user model.User
+		er := json.Unmarshal(cached, &user)
+		if er == nil {
 			log.Info("Using data of redis")
 			return &user, nil
 		}
 	}
 
 	// query
-	var user models.User
-	errSelect := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	var user model.User
+	errSelect := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&user).Error
 	if errSelect != nil {
+		log.Error(errSelect.Error())
 		response := dto.ServiceResponse{
 			Status: 404,
 			Err:    ErrNotFound,
@@ -70,30 +72,31 @@ func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.Us
 	return &user, nil
 }
 
-func (r *userRepository) FindByEmail(ctx context.Context, email string, delete bool) (*models.User, *dto.ServiceResponse) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string, delete bool) (*model.User, *dto.ServiceResponse) {
 
 	// redis
 	key := baseUserEmail + email
 	cached, err := r.rd.Get(ctx, key).Bytes()
 	if err == nil {
-		var user models.User
-		if er := json.Unmarshal(cached, &user); er != nil {
+		var user model.User
+		if er := json.Unmarshal(cached, &user); er == nil {
 			log.Info("Using data of redis")
 			return &user, nil
 		}
 	}
 
 	// query
-	var user models.User
+	var user model.User
 	query := r.db.WithContext(ctx)
 	if delete {
 		query = query.Unscoped()
 	}
-	errSelect := query.Where("email = ?", email).First(&user).Error
+	errSelect := query.Where("email = ? ", email).First(&user).Error
 	if errSelect != nil {
+		log.Error(errSelect.Error())
 		response := dto.ServiceResponse{
-			Status: 500,
-			Err:    errSelect,
+			Status: 404,
+			Err:    ErrNotFound,
 		}
 		return nil, &response
 	}
@@ -104,7 +107,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string, delete b
 	return &user, nil
 }
 
-func (r *userRepository) Update(ctx context.Context, user *models.User) (*models.User, *dto.ServiceResponse) {
+func (r *userRepository) Update(ctx context.Context, user *model.User) (*model.User, *dto.ServiceResponse) {
 
 	// Update và tự động trả về dữ liệu mới nhất (PostgreSQL)
 	if err := r.db.WithContext(ctx).Clauses(clause.Returning{}).Save(user).Error; err != nil {
@@ -123,7 +126,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) (*models
 }
 
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	err := r.db.WithContext(ctx).Delete(&models.User{}, id).Error
+	err := r.db.WithContext(ctx).Delete(&model.User{}, id).Error
 	if err != nil {
 		log.Error("[ERROR] : [USERREPOSITORY} : 106 : " + err.Error())
 		return err
@@ -136,13 +139,18 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *userRepository) List(ctx context.Context, pageRequest *dto.PageRequest) (*dto.PageResponse, error) {
-	var users []*models.User
+	var users []*model.User
 	var total int64
 
-	query := r.db.Model(&models.User{})
+	query := r.db.Model(&model.User{})
 
 	if pageRequest.Search != "" {
-		query = query.Where("email ILIKE ?", "%"+pageRequest.Search+"%")
+		if r.db.Dialector.Name() == "postgres" {
+			query = query.Where("email ILIKE ?", "%"+pageRequest.Search+"%")
+		} else {
+			// SQLite, MySQL
+			query = query.Where("email LIKE ?", "%"+pageRequest.Search+"%")
+		}
 	}
 
 	if pageRequest.Role != nil {
