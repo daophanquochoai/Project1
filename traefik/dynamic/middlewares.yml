@@ -1,0 +1,31 @@
+http:
+  middlewares:
+    cors-default:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "http://localhost:3000"
+        addVaryHeader: true
+
+    strip-userservice:
+      stripPrefix:
+        prefixes:
+          - /api/userservice
+
+    strip-productservice:
+      stripPrefix:
+        prefixes:
+          - /api/productservice
+
+    rate-limit-basic:
+      rateLimit:
+        average: 10
+        burst: 2000
